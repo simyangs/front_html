@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<div id="BDM002">
+	<h3>board002</h3>
+	<div>
+		<button id="btnPopup" type="button">popup</button>
+		<button id="btnMenu" type="button">go menu</button>
+	</div>
+</div>
+
+<script>
+(()=>{
+	const scrId = 'BDM002'; 
+	commView.view(scrId, (param)=>{
+		const context = '#'+scrId;
+		let exports = {};
+		
+		exports.onload = ()=>{
+			console.log('onload BD002');
+		};
+		
+		exports.event = ()=>{
+			console.log('evnet load BD002', context);
+			console.log($('#btnPopup', context));
+			$('#btnPopup', context).on('click', ()=>{
+				console.log('11');
+				commView.loadModal('BDP001', {test: '111'})
+				.then((data)=>{
+					console.log('result', data);
+				});
+			});
+			
+			$('#btnMenu', context).on('click', ()=>{
+				commView.goMenu('BDM001', {test: '111'});
+			});
+		}
+		
+		return exports;
+		
+	});	
+})();
+
+</script>
+</html>

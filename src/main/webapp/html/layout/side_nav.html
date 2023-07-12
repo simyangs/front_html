@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<div th:fragment="side_nav">
+	<div class="sideLnb" style="width: 194px;">
+		<div class="v-box h100">
+			<div class="posi_re flex-1">
+				<div class="sideLnbMenu">
+					<div>
+						<div>
+							<ul class="lnb-container snbCon" id="lnbMenu">
+								
+							</ul>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+(()=>{
+	function loadMenu(){
+		commAjax.get('/menu/menulist')
+		.then((data)=>{
+			const menuList = data.menuList;
+			commView.setMenuList(menuList);
+			
+			drawMenu(menuList);
+			handleEvent();
+		});
+	}
+	
+	function handleEvent(){
+		$('[data-menutype]').on('click', function(){
+			
+			if($(this).data('menutype') == 'G'){
+				$(this).closest('li').toggleClass('nav-item-open');
+				$(this).closest('li').toggleClass('nav-item-close');
+			}else{
+				if($(this).closest('li').hasClass('selected')) return;
+				window.location.href = $(this).data('url');	
+			}
+			
+		});
+	}
+	
+	function drawMenu(menuList){
+		const temp = $(document.createDocumentFragment());
+		
+		const pList = menuList.filter(item => item.level == 0);
+		for(const pItem of pList){
+			const gli = $('<li class="nav-item step-1 nav-item-close"></li>');
+			
+			const gTitle = $(`
+ 				<div class="extend" data-menutype="${pItem.menuType}">
+ 					<span class="nav-text">${pItem.menuNm}</span>
+ 				</div>
+ 			`);
+			
+			gli.append(gTitle);
+			
+			const cList = menuList.filter(item => item.parentSeq == pItem.menuSeq);
+			
+			if(cList.length > 0){
+				const gSub = $('<ul class="sub-container"></ul>');
+				for(const cItem of cList){
+					if(cItem.viewYn != 'Y') continue;
+					const sli = $('<li class="nav-item step-2"></li>');
+					
+	 				const sTitle = $(`
+	 					<div class="extend" data-id="${cItem.menuId}" data-url="#${cItem.menuUrl}" data-menutype="${cItem.menuType}">
+	 						<span class="nav-text">${cItem.menuNm}</span>
+	 					</div>
+	 				`);
+					
+	 				sli.append(sTitle);
+	 				gSub.append(sli);
+				}
+				gli.append(gSub);
+				
+			}
+			temp.append(gli);
+		}
+		
+		$('.lnb-container').html(temp);
+		
+	}
+
+	loadMenu();
+})();
+</script>
+</html>

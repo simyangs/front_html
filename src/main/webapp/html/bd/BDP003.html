@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl" id="BDP003">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">글쓰기</h5>
+            <button class="btn-close"></button>
+        </div>
+        <div class="modal-body">
+            <form>
+                <div class="row mb-3">
+                    <label for="iptBoardTitle" class="col-sm-2 col-form-label">제목</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="iptBoardTitle" required>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="iptBoardCreator" class="col-sm-2 col-form-label">이름</label>
+                    <div class="col-sm-3">
+                        <!-- <th:block sec:authorize="isAuthenticated()">
+                            <input type="text" class="form-control" id="iptBoardCreator" th:value="${#authentication.principal.name}" readonly required />
+                            <input type="hidden" id="iptBoardCreatorId" th:value="${#authentication.name}" />
+                        </th:block>
+                        <th:block sec:authorize="isAnonymous()">
+                            <input type="text" class="form-control" id="iptBoardCreator" required>
+                            <input type="hidden" id="iptBoardCreatorId" th:value="guest" />
+                        </th:block> -->
+                        <input type="text" class="form-control" id="iptBoardCreator" required>
+                        <input type="hidden" id="iptBoardCreatorId" th:value="guest" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="summernote" class="col-sm-2 col-form-label">내용</label>
+                    <div class="col-sm-10">
+                        <div id="summernote"></div>
+                        <div id="boardView"></div> 
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label for="iptBoardFile" class="col-sm-2 col-form-label">첨부파일</label>
+                    <div class="col-sm-9">
+                        <input type="file" class="form-control" id="iptBoardFile">
+                        
+                    </div>
+                    <div class="col-sm-1 d-none">
+                        <button class="btn btn-sm btn-secondary" id="btnBoardfileDel">삭제</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" id="btnSave">저장</button>
+            <button class="btn btn-cancel btn-secondary">취소</button>
+        </div>
+    </div>
+</div>
+<script>
+
+(()=>{
+	const scrId = 'BDP003';
+	var board;
+	commView.modal(scrId, (param, fnClose)=>{
+		const context = '#' + scrId;
+		var exports = {};
+		
+		const tempImgPath = `temp/${moment().format('YYYYMMDD')}/${commUtil.getUUID()}`;
+		
+		exports.onload = ()=>{
+			console.log('onload popup');
+			board = new commApp.board('#summernote', context);
+			
+		}
+		
+		exports.event = ()=>{
+			$('#btnSave', context).on('click', ()=>{
+				var contentImgList = board.getContentImgList();
+
+                const params = {
+                    boardTp: param.boardTp,
+                    title: $('#iptBoardTitle', context).val(),
+                    creator: $('#iptBoardCreatorId', context).val(),
+                    creatorName: $('#iptBoardCreator', context).val(),
+                    content: encodeURIComponent(board.getCode()),
+                    tempImgPath: board.getTempImgPath(),
+                    contentImgList
+                }
+                
+                console.log(contentImgList);
+                console.log(params);
+                if(confirm('저장 하시겠습니까?')){
+                    commAjax.post('/board/save', params)
+                    .then((data)=>{
+                    	alert('저장 되었습니다.');
+                    	fnClose(true);
+                    });
+                }
+			});
+		}
+		
+		return exports;
+	});	
+})();
+
+</script>
+</html>

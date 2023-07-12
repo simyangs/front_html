@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<div id="BDM003">
+	<h3 id="txtBoardTitle"></h3>
+	<div class="table-wrap">
+		<form>
+			<table class="table-detail">
+				<colgroup>
+					<col width="15%">
+					<col width="30%">
+					<col width="15%">
+					<col width="30%">
+				</colgroup>
+				<tbody>
+					<tr>
+						<th>
+							<label for="txtBoardCreator" class="col-form-label">작성자</label>
+						</th>
+						<td>
+							<p id="txtBoardCreator"></p>
+						</td>
+						<th>
+							<label for="txtBoardCreateAt" class="col-form-label">작성일</label>
+						</th>
+						<td>
+							<p id="txtBoardCreateAt"></p>
+						</td>
+					</tr>
+					<tr>
+						<th>
+							<label for="txtBoardContent" class="col-form-label">내용</label>
+						</th>
+						<td colspan="3">
+							<p id="txtBoardContent" style="min-height: 300px"></p>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</form>
+	</div>
+	<div class="btn-wrap d-flex justify-content-end">
+		<button class="btn btn-primary" id="btnList">목록으로</button>
+	</div>
+    <div class="comment-area">
+    	<div class="comment-row">
+    		<div class="comment-list">
+    			<div class="coment-group">
+    				<div class="comment-box">
+    					<div class="comment-wrap">
+    						<div class="write-user">
+    						</div>
+    						<pre class="comment">
+    						
+    						</pre>
+    						<div class="comment-date-created"></div>
+    					</div>
+    				</div>
+    			</div>
+    		</div>
+    	</div>
+    </div>
+    
+</div>
+<script>
+
+(()=>{
+	const scrId = 'BDM003';
+	commView.view(scrId, (param)=>{
+		const context = '#' + scrId;
+		let exports = {};
+		
+		exports.onload = ()=>{
+			console.log('onload');
+			console.log('param', param);
+			
+			getDetail();
+		}
+		
+		exports.event = ()=>{
+			$('#btnList').on('click', ()=>{
+				commView.goMenu('BDM001', {});
+			});
+		}
+		
+		function getDetail(){
+			if(!param.boardId) return;
+			
+			commAjax.get('/board/detail', {boardId: param.boardId})
+            .then(function(data){
+            	if(!data){
+            		alert('조회된 게시글이 없습니다.');
+            		return;
+            	}
+				$('#txtBoardTitle', context).text(data.title);
+                $('#txtBoardCreator', context).text(commUtil.unescapeHtml(data.creatorName));
+                $('#txtBoardCreateAt', context).text(moment(data.createAt).format('YYYY-MM-DD hh:mm:ss'));
+                $('#txtBoardContent', context).html(decodeURIComponent(data.content));
+            });
+		}
+		
+		return exports;
+	});	
+})();
+
+</script>
+</html>

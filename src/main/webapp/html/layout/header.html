@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<div class="headerWrap h-box">
+	
+    <div class="spinner-border" role="status" style="display: none;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+	
+	<div class="main-ci">
+		<h2>
+			<a href="/">DEMO FRAME</a>
+		</h2>
+	</div>
+	<div class="headContent h-box d-flex justify-content-end" >
+		<div class="d-flex justify-content-start align-items-center" id="login_info">
+<!-- 			<th:block sec:authorize="isAuthenticated()"> -->
+<!-- 			    <div class="loginInfo"> -->
+<!-- 			        <span class="p-2"> -->
+<!-- 			            <th:block sec:authentication="principal.user.name"></th:block> | -->
+<!-- 			            <th:block sec:authorize="hasRole('ROLE_ADMIN')">관리자</th:block> -->
+<!-- 			            <th:block sec:authorize="hasRole('ROLE_USER')">사용자</th:block> -->
+<!-- 			            <th:block sec:authorize="hasRole('ROLE_GUEST')">GUEST</th:block> -->
+<!-- 			        </span> -->
+			        
+<!-- 			    </div> -->
+<!-- 			    <div> -->
+<!-- 			        <button class="btn btn-outline-light" id="btnLogout" >logout</button> -->
+<!-- 			    </div> -->
+<!-- 			</th:block> -->
+<!-- 			<th:block sec:authorize="isAnonymous()"> -->
+<!-- 			    <div> -->
+<!-- 		        <button class="btn btn-outline-light" id="btnLogin" data-bs-toggle="modal" data-bs-target="#modal_login">login</button> -->
+<!-- 		        </div> -->
+<!-- 		    </th:block> -->
+		</div>
+	</div>
+	
+</div>
+<script>
+(()=>{
+	console.log('header!!');
+	if(sessionStorage.getItem('userid')){
+		let authName = '';
+		const role = sessionStorage.getItem('role');
+		if(role == 'admin') authName = '관리자';
+		if(role == 'user') authName = '사용자';
+		if(role == 'guest') authName = 'GUEST';
+		
+		const div = `
+			<div class="loginInfo">
+				<span class="p-2">${authName}</span>
+			</div>
+			<div>
+				<button class="btn btn-outline-light" id="btnLogout" >logout</button>
+			</div>
+		`;
+		
+		$('#login_info').html(div);
+	}else{
+		const div = `
+			<div>
+				<button class="btn btn-outline-light" id="btnLogin" data-bs-toggle="modal" data-bs-target="#modal_login">login</button>
+			</div>
+		`;
+		$('#login_info').html(div);
+	}
+	
+	// 로컬 개발용
+	if(comm.getServerType == 'local'){
+		const $input = $('<input type="text">');
+		$input.on('keyup', function(e){
+			if(e.keyCode == 13){
+				commView.devLoadMenu(this.value);
+			}
+		});
+		$('#login_info').prepend($input);
+	}
+})();
+</script>
+</html>

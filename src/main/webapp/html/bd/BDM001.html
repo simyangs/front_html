@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<div id="BDM001">
+	<h3>board list</h3>
+    <div class="d-flex justify-content-end mb-2">
+    	<input type="text" class="form-control" style="width: 200px; margin-right: 5px;" id="iptSrhTitle">
+        <button class="btn btn-primary" id="btnSearch">조회</button>
+    </div>
+    <div data-ax5grid="brdGrid" style="height: auto;"></div>
+    <div id="brdGrid" ></div>
+    <div id="gridPager" class="grid-pager"></div>    
+    <!-- <div style="margin-top:10px; text-align: center;" id="exPager"></div> -->
+    
+    <div class="text-end">
+        <button class="btn btn-primary" id="btnCreate">글쓰기</button>
+        <button class="btn btn-primary" id="btnExcel">excel</button>
+    </div>
+</div>
+<script>
+(()=>{
+	const scrId = 'BDM001'
+    commView.view(scrId, (param)=>{
+        const context = '#'+scrId;
+        let exports = {};
+        let grid = null;
+        const boardTp = 1;
+        const perPage = 10;
+
+        // onload
+        exports.onload = ()=>{
+            console.log('onload!!!');
+            console.log(param);
+            
+			initGrid();
+			getBoardList();
+        };
+
+        // event
+        exports.event = ()=>{
+        	$('#iptSrhTitle', context).on('keyup', (e)=>{
+        		if(e.keyCode == 13) $('#btnSearch', context).click();
+        	});
+        	
+        	// 조회 버튼
+            $('#btnSearch', context).on('click', ()=>{
+                getBoardList(1);
+            });
+
+            // 글쓰기 버튼
+            $('#btnCreate', context).on('click', ()=>{
+            	commView.loadModal('BDP003', {boardTp})
+            	.then((rs)=>{
+            		if(rs) $('#btnSearch', context).click();
+            	});
+				
+            });
+            
+            // excel
+            $('#btnExcel', context).on('click', ()=>{
+            	grid.exportExcel('test.xlsx');
+            	
+            })
+        }
+        
+        // 그리드 생성
+		function initGrid(){
+			const fields = [
+				{name: 'boardId', label: 'No', width: 100, visible: true},
+				{name: 'title', label: '제목', align: 'left'},
+				{name: 'creatorName', label: '작성자', width: 50, addClass: 'ellipsis'},
+				{label: '작성일시', width: 200, formatter: (row)=> moment(row.createAt).format('YYYY-MM-DD hh:mm:ss')}
+			];
+			
+			const option = {
+				//selectType: 'checkbox',
+				
+				pagination: {
+					targetId: 'gridPager',
+					perPage,
+					itemCount: 10,
+					onChange: (page)=>{
+						getBoardList(page);
+					}
+				},
+				
+				event: {
+					rowClick: (e)=>{
+						console.log(e);
+						if(e.colId == 'title'){
+							commView.loadModal('BDP002', {boardId: e.data.boardId});
+						}
+					}
+				}	
+			}
+			
+			grid = new commApp.grid('brdGrid', fields, option);
+		}
+
+		// 조회
+		function getBoardList(_page){
+			const page = _page || 1;
+			const params = {
+				boardTp: 1,
+				title: $('#iptSrhTitle').val(),
+				page,
+				perPage
+			}
+			commAjax.get('/board/list', params)
+			.then((rs)=>{
+				console.log(rs);
+				
+				grid.setData(rs.contents);	
+				grid.setPagination(rs.pagination.totalCount, rs.pagination.page);
+			});
+			
+		}
+		
+
+		function GridJs(id){
+			this.Grid = new gridjs.Grid({
+				columns: [
+					{id: 'boardId', name: '순번'},
+					{id: 'title', name: '제목'},
+					{id: 'creatorName', name: '작성자'},
+					{id: 'createAt', name: '작성일시'},
+				],
+				server: {
+					url: '/api/board/list?boardTp=1',
+					then: (rs)=> {
+						return rs.data.contents.map(item => {
+							return {
+								...item,
+								createAt: moment(item.createAt).format('YYYY-MM-DD hh:mm:ss')
+							}
+						})
+					},
+					total: rs => rs.data.pagination.totalCount
+				},
+				pagination: {
+					limit: 10,
+					buttonsCount: 10,
+					//summary: false,
+					server: {
+						url: (prev, page, limit)=> {
+							console.log("====================");
+							console.log(prev);
+							console.log(page);
+							return `${prev}&perPage=${limit}&page=${page+1}`	
+						}
+// 						then: (rs)=> {
+// 							return rs.data.contents.map(item => 
+// 								[item.boardId, item.title, item.creatorName, moment(item.createAt).format('YYYY-MM-DD hh:mm:ss')]
+// 							)
+// 						}
+					},
+				},
+				
+			}).render(document.getElementById(id));
+			
+			this.Grid.on('rowClick', (...args)=> console.log(args));
+		}
+
+		function JqGrid(id){
+			this.Grid = $('#'+id);
+			
+			const colModel = [
+				{name: 'boardId', label: '순번', width: 50, align: 'center', key:true},
+				{name: 'title', label: '제목', width: 500, align: 'left'},
+				{name: 'creatorName', label: '작성자', align: 'center'},
+				{name: 'readCnt', label: '조회수', width: 80, align: 'right'},
+				{name: 'commentCnt', label: '댓글수', width: 80, align: 'right'},
+				{name: 'createAt', label: '작성일', align: 'center', formatter: (value)=> moment(value).format('YYYY-MM-DD hh:mm:ss')},
+			];
+			
+			this.Grid.jqGrid({
+				//dataType: 'json',
+				colModel,
+				guiStyle: 'bootstrap',
+				pager: true,
+				rowNum: 10,
+				url: '/api/board/list?boardTp=1',
+				mType: 'get',
+				datatype: 'json'
+				
+			});
+			
+			this.loadData = (_page)=> load(_page);
+			
+			const load = async(_page)=>{
+				console.log('_page ::', _page);
+				const page = _page ? _page+1 : 1;
+				const data = await commAjax.get('/board/list', {boardTp: 1, page});
+				
+				data.contents.forEach((item, index)=>{
+					console.log(item);
+					this.Grid.jqGrid('addRowData', index, item);
+				});
+				
+// 				for(const item of data.contents){
+// 					console.log(item);
+// 					this.Grid.jqGrid('addRowData', item);	
+// 				}
+				
+			}
+			
+		}
+
+
+		function AxGrid(gridId){
+			ax5.ui.grid.tmpl.page_status = ()=>{
+				return '';
+			}
+			this.Grid = new ax5.ui.grid();
+			
+			this.loadData = (_page)=> load(_page);
+			
+			const header = {
+				align: "center",
+		        columnHeight: 30
+			};
+			
+			const body = {
+				align: "center",
+			    columnHeight: 30,
+			    onClick: function(){
+			    	console.log(this);
+			    	commView.loadModal('BDP002', {boardId: this.item.boardId});
+			    }
+			};
+			
+			const load = async(_page)=>{
+				console.log('_page ::', _page);
+				const page = _page ? _page+1 : 1;
+				const data = await commAjax.get('/board/list', {boardTp: 1, page});
+				this.Grid.setData({
+					list: data.contents,
+					page: {
+						currentPage: page-1,
+						pageSize: data.pagination.perPage,
+						totalElements: data.pagination.totalCount,
+						totalPages: data.pagination.totalPages
+					}
+				})
+			}
+			
+			const page = {
+				navigationItemCount: 5,
+				height: 30,
+				display: true,
+				firstIcon: '<<',
+				prevIcon: '<',
+				nextIcon: '>',
+				lastIcon: '>>',
+				onChange:  function(){
+					load(this.page.selectPage);
+	            }
+			}
+			
+			const opt = {
+				scroller: {
+					size: 0
+				}
+			}
+			
+			const columns = [
+				{key: 'boardId', label: '순번', width: 50, align: 'center'},
+				{key: 'title', label: '제목', width: 500, align: 'left'},
+				{key: 'creatorName', label: '작성자', width: '*', align: 'center', styleClass: ()=>'ellipsis'},
+				{key: 'readCnt', label: '조회수', width: 80, align: 'right'},
+				{key: 'commentCnt', label: '댓글수', width: 80, align: 'right'},
+				{key: 'createAt', label: '작성일', width: '*', align: 'center' ,formatter: (value)=> moment(value).format('YYYY-MM-DD hh:mm:ss')},
+			];
+			
+			this.Grid.setConfig({
+				target: $(`[data-ax5grid="${gridId}"]`),
+				height: '360',
+				header,
+				body,
+				page,
+				columns,
+				...opt
+			});	
+			
+			this.exportExcel = ()=>{
+				return this.Grid.exportExcel();
+			}
+			
+			
+		}
+		
+		
+		
+        return exports;
+    });
+})();
+</script>
+</html>

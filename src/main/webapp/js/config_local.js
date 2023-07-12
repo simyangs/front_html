@@ -1,0 +1,1 @@
+const api_url = `http://${location.hostname}:8080/demo`;

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<div class="modal-dialog modal-dialog-centered modal-xl" id="BDP002">
+	<div class="modal-content">
+		<div class="modal-header">
+            <h5 class="modal-title">글상세</h5>
+            <button class="btn-close"></button>
+        </div>
+        <div class="modal-body">
+        	<div class="table-wrap">
+		        <form>
+		            <table class="table-detail">
+		                <colgroup>
+		                    <col width="15%">
+		                    <col width="30%">
+		                    <col width="15%">
+		                    <col width="30%">
+		                </colgroup>
+		                <tbody>
+		                    <tr>
+		                        <th>
+		                            <label for="txtBoardCreator" class="col-form-label">작성자</label>
+		                        </th>
+		                        <td>
+		                            <p id="txtBoardCreator"></p>
+		                        </td>
+		                        <th>
+		                            <label for="txtBoardCreateAt" class="col-form-label">작성일</label>
+		                        </th>
+		                        <td>
+		                            <p id="txtBoardCreateAt"></p>
+		                        </td>
+		                    </tr>
+		                    <tr>
+		                        <th>
+		                            <label for="txtBoardContent" class="col-form-label">내용</label>
+		                        </th>
+		                        <td colspan="3">
+		                            <p id="txtBoardContent" style="min-height: 300px"></p>
+		                        </td>
+		                    </tr>
+		                </tbody>
+		            </table>
+		        </form>
+		    </div>
+		    <div class="comment-area">
+		    	<h2>
+		    		댓글
+		    		<span class="count" id="commentCount">0</span>
+		    	</h2>
+	    		<div class="comment-list">
+
+	    		</div>
+		    	<div class="comment-form">
+		    		<span>
+		    			<textarea rows="4" placeholder="댓글을 입력해주세요."></textarea>
+		    		</span>
+		    		<div class="comment-submit">
+		    			<button class="btn btn-primary" id="btnSaveComment">등록</button>
+		    		</div>
+		    		
+		    	</div>
+		    </div>
+        </div>
+        <div class="modal-footer justify-content-center">
+        	<button class="btn btn-secondary btn-cancel" type="button">닫기</button>
+        </div>
+	</div>
+
+</div>
+<script>
+
+(()=>{
+	const scrId = 'BDP002';
+	commView.modal(scrId, (gParam, fnClose)=>{
+		const context = '#' + scrId;
+		let exports = {};
+		
+		// onload
+		exports.onload = ()=>{
+			console.log('onload popup');
+			console.log('gParam', gParam);
+			
+			$('.modal-title', context).html(gParam.title);
+			
+			getDetail();
+			getComment();
+		}
+		
+		// event 
+		exports.event = ()=>{
+			$('#btnSaveComment').on('click', ()=>{
+				const params = {
+					commentContent: $('.comment-form').find('textarea').val(),
+					boardId: gParam.boardId
+				}
+				console.log(params);
+				if(!confirm('저장 하시겠습니까?')) return;
+				
+				commAjax.post('/board/savecomment', params)
+				.then((data)=>{
+					console.log(data);
+					$('.comment-form').find('textarea').val('');
+					getComment();
+				});
+			});
+		}
+		
+		// 상세조회
+		function getDetail(){
+			commAjax.get('/board/detail', {boardId: gParam.boardId})
+            .then(function(data){
+
+                $('#txtBoardCreator', context).text(commUtil.unescapeHtml(data.creatorName));
+                $('#txtBoardCreateAt', context).text(moment(data.createAt).format('YYYY-MM-DD hh:mm:ss'));
+                $('#txtBoardContent', context).html(decodeURIComponent(data.content));
+            });
+		}
+		
+		// 댓글 조회
+		function getComment(){
+			commAjax.get('/board/commentlist', {boardId: gParam.boardId})
+			.then(function(data){
+				console.log(data);
+				drawComment(data);
+			});
+		}
+		
+		// 댓글 그리기
+		function drawComment(list){
+			$('#commentCount').text(list.length);
+			const $ul = $('<ul>');
+			const pList = list.filter((item)=> item.parentId == 0);
+			
+			// 댓글
+			for(const pItem of pList){
+				const $li =  makeComment(pItem);
+				
+				// 답글
+				const cList = list.filter((item)=>item.parentId == pItem.commentId);
+				if(cList.length > 0){
+					$cul = $('<ul>');
+					for(const cItem of cList){
+						$cul.append(makeComment(cItem));
+					}
+					$li.append($cul);
+				}
+				$ul.append($li);
+			}
+			
+			$('.comment-list').empty();
+			$('.comment-list').append($ul);
+			
+			//답글 이벤트
+			addReplyEvent();
+		}
+		
+		// 답글 이벤트
+		function addReplyEvent(){
+			$('a.reply').on('click', function(e){
+				// 다른 답글 입력취소
+				$('.reply-form .reply-cancel').trigger('click');
+				
+				const $this = $(this);
+				const commentId = $this.data('commentid');
+				const $replyArea = $this.closest('div'); 
+				
+				const $replyForm = $('<div class="reply-form"><textarea rows="3" ></textarea></div>');
+				const $control = $('<div>');
+				
+				$contSave = $('<span>저장</span>');
+				$contCancel = $('<span class="reply-cancel">취소</span>');
+				
+				// 저장
+				$contSave.on('click', ()=>{
+					const params = {
+						parentId: commentId,
+						commentContent: $replyForm.find('textarea').val(),
+						boardId: gParam.boardId
+					}
+					console.log(params);
+					if(!confirm('저장 하시겠습니까?')) return;
+					
+					commAjax.post('/board/savecomment', params)
+					.then((data)=>{
+						console.log(data);
+						afterSaveComment($replyForm, data);
+						$replyForm.remove();
+						$this.show();
+					});
+				});
+				
+				// 취소
+				$contCancel.on('click', ()=>{
+					$replyForm.remove();
+					$this.show();
+				});
+				
+				$replyForm.append($contSave);
+				$replyForm.append(" | ");
+				$replyForm.append($contCancel);
+				
+				$replyArea.append($replyForm);
+				
+				$this.hide();
+			});
+		}
+		
+		// 답글 저장후 처리
+		function afterSaveComment($replyArea, item){
+			const $li = $replyArea.closest('li');
+			let $ul;
+			
+			if($li.find('ul').length > 0){
+				$ul = $li.find('ul');
+			}else{
+				$ul = $('<ul>');
+				$li.append($ul);
+			}
+			
+			$ul.append(makeComment(item));
+		}
+		
+		// 댓글tag
+		function makeComment(item){
+			const li = $('<li>');
+			const meta = $('<div class="comment-meta">');
+			meta.append(`<span class="nickname">${item.creatorId}</span>`);
+			meta.append(`<span class="date">${moment(item.createAt).format('YYYY.MM.DD hh:mm')}</span>`);
+			meta.append(`<span class="control"></span>`);
+			
+			const content = $('<p>');
+			
+			content.html(item.commentContent.replace(/(\n|\r\n)/g, '<br>'));
+			if(!item.parentId){
+				
+				content.append('<br/>');
+				content.append(`<div class="reply-area"><a class="reply" data-commentid="${item.commentId}">답글</a></div>`);
+			}
+			
+			li.append(meta);
+			li.append(content);
+			
+			return li;
+		}
+		
+		return exports;
+	});	
+})();
+
+</script>
+</html>
